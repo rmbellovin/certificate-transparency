@@ -1,0 +1,53 @@
+README
+
+The go code for this CTL monitor consists of ctl_monitor.go and three library files (monitor.go, controller.go, and ctl_parsing.go).  I am running go-1.10.4 on Ubuntu 18.04.  My $GOPATH is $HOME/go, and I put ctl_monitor.go in $HOME/go/src/cloudflare, monitor.go in $HOME/go/src/cloudflare/monitor, controller.go in $HOME/go/src/cloudflare/controller, and ctl_parsing.go in $HOME/go/src/cloudflare/ctl_parsing.  In addition to the standard libraries, it also requires the libraries gorilla/mux, mattn/go-sqlite3, prometheus/client_golang/prometheus, and prometheus/client_golang/prometheus/promhttp, which should be automagically downloaded from github.
+
+The docker image of this CTL monitor is ctl_monitor-app, and it listens on port 8000.  
+
+It takes a specified CTL url on the commandline, and checks every five minutes whether there are new certificates.  It then checks whether any new certificate corresponds to a hostname on the list (by parsing the X509 certificate or PreCert entry and checking the commonname field), and if so, adds it to a sqlite3 database.  Rows added to the database must be unique.
+
+When ctl_monitor-app starts, it opens a sqlite3 database with the filename CTL.db (the leading 'https://' is stripped, and any '/' are converted to '.').  Certificates are stored in a table called 'certificates'.  If a table with this name already exists, it drops it.  The columns of the table are 'timestamp' (in Unix format), 'commonname', 'certificate' (the entry field of the Merkle tree leaf, which is the raw certificate preceded by some padding bits), and 'logentrytype' (either 'X509' or 'PreCert').
+
+This CTL monitor collects prometheus metrics for the certificates it finds.  For each hostname on the list, it registers one counter for X509 certificates in the log and one counter for PreCert entries.  These counters are incremented when an appropriate row is added to the database.
+
+
+Command-line options are as follows:
+
+[--hostname HOSTNAME] 
+	hostname to monitor (more than one "--hostname HOSTNAME" may be 	specified) 
+[--verbose]
+	verbose output to log; defaults to false 
+[--port PORT] 
+	port to listen on; defaults to 8000 
+[--build]
+	automatically build a database on start-up; defaults to false 
+--ctl CTL 
+	certificate transparency log to monitor (required)
+
+
+Once ctl_monitor or ctl_monitor-app is running, there is an API.  The functions implemented are:
+
+"/": Prints the current status
+"Add?hostname=HOSTNAME": 
+	Adds HOSTNAME to the list of hostnames
+"Remove?hostname=HOSTNAME": 
+	Removes HOSTNAME from the list of hostnames, but does not delete
+	the corresponding entries from the database or remove the
+	corresponding metrics
+"Delete?hostname=HOSTNAME": 
+	Removes HOSTNAME from the list of hostnames, and deletes the
+	corresponding entries from the database and the corresponding
+	metrics
+"ListHostnames": 
+	Lists the hostnames it is currently looking for certificates for
+"ListCertificates?hostname=HOSTNAME": 
+	Queries the database for certificates for HOSTNAME
+"Build": 
+	Searches the entire CTL for certificates for the hostnames of
+	interest
+"Stop": 
+	Stop automatically querying the CTL every 5 minutes
+"Start": 
+	Resume automatically querying the CTL every 5 minutes
+"Check": 
+	Query the CTL for new entries
