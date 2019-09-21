@@ -5,7 +5,7 @@ import "flag"
 import "strings"
 import "github.com/gorilla/mux"
 import "log"
-import "./controller"
+import "./ctl_monitor-lib"
 import "strconv"
 import "github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -48,7 +48,7 @@ func main() {
         *ctl_host = *ctl_host + "/"
     }
 
-    controller, err := controller.NewController(*ctl_host, hostnames, *verbose, *no_auto, *build, *no_delete, *non_strict)
+    controller, err := ctl_monitor_lib.NewController(*ctl_host, hostnames, *verbose, *no_auto, *build, *no_delete, *non_strict)
     if err != nil {
         log.Fatalln(err)
     }
