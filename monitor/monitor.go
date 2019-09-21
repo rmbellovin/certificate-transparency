@@ -126,6 +126,20 @@ func (m *Monitor) Get_tree_head() ctl_parsing.Signed_tree_head {
 
 }
 
+// return timestamp of treehead
+func (m *Monitor) Get_timestamp() uint64 {
+    
+    return m.tree_head.Timestamp
+
+}
+
+// return treesize
+func (m *Monitor) Get_treesize() uint64 {
+
+    return m.tree_head.Tree_size
+
+}
+
 // get timestamps and certificates for specified hostname
 func (m *Monitor) List_certs(hostname string) []db_row {
 

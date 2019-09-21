@@ -6,6 +6,7 @@ import "github.com/gorilla/mux"
 import "../monitor"
 import "strings"
 import "log"
+import "time"
 
 type Controller struct {
     monitor monitor.Monitor
@@ -14,7 +15,7 @@ type Controller struct {
 // print status
 func (c *Controller) Status(w http.ResponseWriter, r *http.Request) {
 
-    fmt.Fprintf(w, "Monitoring the certificate transparency log %s for certificates for the following hostnames:\n %v", c.monitor.CTL_host(), c.monitor.Get_hostnames())
+    fmt.Fprintf(w, "Monitoring the certificate transparency log %s for certificates for the following hostnames:\n %v\nThe certificate transparency log was last updated at %s and contains %d entries.\n", c.monitor.CTL_host(), c.monitor.Get_hostnames(), time.Unix(0, int64(c.monitor.Get_timestamp())*1e6).String(), c.monitor.Get_treesize())
 
 }
 
