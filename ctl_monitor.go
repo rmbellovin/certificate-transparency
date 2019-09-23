@@ -5,7 +5,7 @@ import "flag"
 import "strings"
 import "github.com/gorilla/mux"
 import "log"
-import "./ctl_monitor-lib"
+import "certificate-transparency/ctl_monitor-lib"
 import "strconv"
 import "github.com/prometheus/client_golang/prometheus/promhttp"
 

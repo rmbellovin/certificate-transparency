@@ -3,7 +3,6 @@ package ctl_monitor_lib
 import "fmt"
 import "net/http"
 import "github.com/gorilla/mux"
-//import "../monitor"
 import "strings"
 import "log"
 import "time"

@@ -6,7 +6,6 @@ import "database/sql"
 import _ "github.com/mattn/go-sqlite3"
 import "time"
 import "regexp"
-//import "../ctl_parsing"
 import "strings"
 import "github.com/prometheus/client_golang/prometheus"
 
@@ -177,7 +176,7 @@ func (m *Monitor) buildDB() {
 
 }
 
-// search ct log from entry 'start' to entry 'end' and add the appropriate certificates to the database
+// search ct log from entry 'start' to entry 'end' and add the appropriate certificates to the database.  if 'end' >= 'tree_size', replaces 'end' with 'tree_size'-1
 func (m *Monitor) addEntries(start uint64, end uint64) {
 
 // prepare a statement to insert results into the database
