@@ -46,7 +46,7 @@ func NewMonitor(ctl_host string, hostnames []string, verbose bool, no_delete boo
 
     monitor.Signal = make(chan int)
 
-    sth, err := Get_sth(ctl_host)
+    sth, err := getSTH(ctl_host)
     if err != nil {
         log.Println("Error getting signed tree head.")
         return &monitor, err
@@ -55,15 +55,15 @@ func NewMonitor(ctl_host string, hostnames []string, verbose bool, no_delete boo
     if monitor.VERBOSE { fmt.Printf("Tree head: \n%v\n", monitor.tree_head) }
 
 // prepare database
-    database_name := make_db_name(ctl_host)
-    monitor.database, err = prepare_db(database_name, monitor.VERBOSE, no_delete)
+    database_name := makeDBName(ctl_host)
+    monitor.database, err = prepareDatabase(database_name, monitor.VERBOSE, no_delete)
     if err != nil {
         log.Println("Error initializing database.")
         return &monitor, err
     }
 
 // prepare metrics
-    monitor.certificate_metrics = prepare_metrics(monitor.hostnames)
+    monitor.certificate_metrics = prepareMetrics(monitor.hostnames)
     prometheus.MustRegister(monitor.certificate_metrics)
 
     monitor.NON_STRICT = non_strict
@@ -79,7 +79,7 @@ func (m *Monitor) CTL_host() string {
 }
 
 // add hostnames
-func (m *Monitor) Add_hostnames(new_hostnames []string) {
+func (m *Monitor) addHostnames(new_hostnames []string) {
 
     for _, entry := range new_hostnames {
 // if a new hostname isn't already in the hostname list, append it
@@ -98,7 +98,7 @@ func (m *Monitor) Add_hostnames(new_hostnames []string) {
 }
 
 // remove hostname
-func (m *Monitor) Remove_hostname(hostname string) {
+func (m *Monitor) removeHostname(hostname string) {
 
     if m.VERBOSE { fmt.Printf("Removing %s from hostnames\n", hostname) }
 
@@ -113,35 +113,35 @@ func (m *Monitor) Remove_hostname(hostname string) {
 }
 
 // list hostnames
-func (m *Monitor) Get_hostnames() []string {
+func (m *Monitor) getHostnames() []string {
 
     return m.hostnames
 
 }
 
 // return tree head
-func (m *Monitor) Get_tree_head() Signed_tree_head {
+func (m *Monitor) getTreeHead() Signed_tree_head {
 
     return m.tree_head
 
 }
 
 // return timestamp of treehead
-func (m *Monitor) Get_timestamp() uint64 {
+func (m *Monitor) getTimestamp() uint64 {
     
     return m.tree_head.Timestamp
 
 }
 
 // return treesize
-func (m *Monitor) Get_treesize() uint64 {
+func (m *Monitor) getTreeSize() uint64 {
 
     return m.tree_head.Tree_size
 
 }
 
 // get timestamps and certificates for specified hostname
-func (m *Monitor) List_certs(hostname string) []db_row {
+func (m *Monitor) listCerts(hostname string) []db_row {
 
 // query the database
     rows, err := m.database.Query("SELECT DISTINCT timestamp, certificate, logentrytype FROM certificates WHERE commonname = ?", hostname)
@@ -169,16 +169,16 @@ func (m *Monitor) List_certs(hostname string) []db_row {
 }
 
 // search entire ct log and build database
-func (m *Monitor) Build_database() {
+func (m *Monitor) buildDB() {
 
 // add all entries
     if m.VERBOSE { fmt.Printf("Building database of certificates for hostnames %v\n", m.hostnames) }
-    m.add_entries(0, m.tree_head.Tree_size-1)
+    m.addEntries(0, m.tree_head.Tree_size-1)
 
 }
 
 // search ct log from entry 'start' to entry 'end' and add the appropriate certificates to the database
-func (m *Monitor) add_entries(start uint64, end uint64) {
+func (m *Monitor) addEntries(start uint64, end uint64) {
 
 // prepare a statement to insert results into the database
     if m.VERBOSE { fmt.Printf("Searching %s between entries %d and %d for certificates for hostnames %v\n", m.ctl_host, start, end, m.hostnames) }
@@ -189,7 +189,7 @@ func (m *Monitor) add_entries(start uint64, end uint64) {
     defer statement.Close()
 
     var entries []Raw_entry
-    var leaf Merkle_tree_leaf
+    var leaf MerkleTreeLeaf
     var timestamp uint64
     var common_name string
 // make sure we don't go past the end of the CT log
@@ -200,12 +200,12 @@ func (m *Monitor) add_entries(start uint64, end uint64) {
         if m.VERBOSE { fmt.Printf("Checking entries starting at %d\n", start) }
 // request at most REQUEST_SIZE entries from the CT log
         finish := min(start+REQUEST_SIZE, max)
-        entries = Get_entries(m.ctl_host, start, finish)
+        entries = getEntries(m.ctl_host, start, finish)
 
 // parse each entry the CT log returned
         for _, entry := range entries {
 // if the entry is malformed, skip it and go on to the next one
-            leaf, err = Parse_leaf_input(entry)
+            leaf, err = parseLeafInput(entry)
             if err != nil {
                 log.Println(err)
                 continue
@@ -218,7 +218,7 @@ func (m *Monitor) add_entries(start uint64, end uint64) {
             }
 
 // parse the certificate entry and extract the commonname field.  if it's malformed, skip it and go on to the next entry
-            common_name, err = Get_commonname(leaf)
+            common_name, err = getCommonname(leaf)
             if err != nil {
                 log.Println(err)
                 continue
@@ -229,7 +229,7 @@ func (m *Monitor) add_entries(start uint64, end uint64) {
             var hostname string
             var i int
             if m.NON_STRICT {
-                hostname, i = index_non_strict(m.hostnames, common_name)
+                hostname, i = indexNonStrict(m.hostnames, common_name)
             } else {
                 hostname = common_name
                 i = index(m.hostnames, common_name)
@@ -273,7 +273,7 @@ func (m *Monitor) Activate(signal chan int) {
 func (m *Monitor) Check() {
 
 // get the new signed tree head; if there's a problem, print and error and return
-    new_sth, err := Get_sth(m.ctl_host)
+    new_sth, err := getSTH(m.ctl_host)
     if err != nil {
         log.Println("Error getting a new signed tree head")
         log.Println(err)
@@ -283,7 +283,7 @@ func (m *Monitor) Check() {
     if new_sth.Tree_size != m.tree_head.Tree_size {
         if m.VERBOSE { fmt.Printf("New entries found; %s now contains %d entries\n", m.ctl_host, new_sth.Tree_size) }
 
-        m.add_entries(m.tree_head.Tree_size, new_sth.Tree_size-1)
+        m.addEntries(m.tree_head.Tree_size, new_sth.Tree_size-1)
 
         m.tree_head = new_sth
     }
@@ -299,7 +299,7 @@ func (m *Monitor) Stop(signal chan int) {
 }
 
 // deletes database entries for specified hostname
-func (m *Monitor) Delete_db_entries(hostname string) {
+func (m *Monitor) deleteDBEntries(hostname string) {
 
     if m.VERBOSE { fmt.Printf("Deleting database entries for hostname %s.", hostname) }
 // prepare a statement to delete entries from the database
@@ -318,7 +318,7 @@ func (m *Monitor) Delete_db_entries(hostname string) {
 }
 
 // make a database name out of ctl_host
-func make_db_name(ctl_host string) string {
+func makeDBName(ctl_host string) string {
 
     name := ctl_host + ".db"
 
@@ -336,7 +336,7 @@ func make_db_name(ctl_host string) string {
 }
 
 // finds the index of the first occurence of 'word' as a superstring in an array of strings, and returns the substring and the index.  returns "", -1 if word does not appear in array
-func index_non_strict(array []string, word string) (string, int) {
+func indexNonStrict(array []string, word string) (string, int) {
 
     for i, entry := range array {
         if strings.Contains(word, entry) {
@@ -370,7 +370,7 @@ func min(a uint64, b uint64) uint64 {
 }
 
 // prepare database
-func prepare_db(database_name string, verbose bool, no_delete bool) (*sql.DB, error) {
+func prepareDatabase(database_name string, verbose bool, no_delete bool) (*sql.DB, error) {
 
     db, err := sql.Open("sqlite3", database_name)
     if err != nil {
@@ -407,7 +407,7 @@ func prepare_db(database_name string, verbose bool, no_delete bool) (*sql.DB, er
 }
 
 // prepare metrics
-func prepare_metrics(hostnames []string) *prometheus.CounterVec {
+func prepareMetrics(hostnames []string) *prometheus.CounterVec {
 
 // initialize a vector of counters, indexed by hostname and log entry type
     countervec := prometheus.NewCounterVec(prometheus.CounterOpts{

@@ -31,7 +31,7 @@ type get_entry_response struct {
     Entries []Raw_entry
 }
 
-type Merkle_tree_leaf struct {
+type MerkleTreeLeaf struct {
     Version uint8
     MerkleLeafType uint8
     Timestamp uint64
@@ -45,7 +45,8 @@ type certificate struct {
     CertData []byte
 }
 
-func three_byte_to_uint32(bytes []byte) uint32 {
+// parse the first three bytes of a byte array as a uint32
+func threeByteToUint32(bytes []byte) uint32 {
     padded_length := make([]byte,4)
     copy(padded_length[1:],bytes[:3])
     return binary.BigEndian.Uint32(padded_length)
@@ -53,7 +54,7 @@ func three_byte_to_uint32(bytes []byte) uint32 {
 }
 
 // get entries from ctl_host between start and end (inclusive).  throws a fatal error if called with an invalid CT log url, or for an invalid range, or if there is a network problem
-func Get_entries(ctl_host string, start uint64, end uint64) []Raw_entry {
+func getEntries(ctl_host string, start uint64, end uint64) []Raw_entry {
 
     if start < 0 || end < 0 {
         log.Fatalln("Invalid range: start and end must be at least 0")
@@ -94,7 +95,7 @@ func Get_entries(ctl_host string, start uint64, end uint64) []Raw_entry {
         var entry_array get_entry_response
         err = json.Unmarshal(body, &entry_array)
         if err != nil {
-            log.Fatalln("Get_entries", start, end, err)
+            log.Fatalln("getEntries", start, end, err)
         }
 
 // append entries received to our list
@@ -109,7 +110,7 @@ func Get_entries(ctl_host string, start uint64, end uint64) []Raw_entry {
 
 
 // get the signed tree head.  throws a fatal error if the CT log url is invalid, or there is a network issue
-func Get_sth(ctl_host string) (Signed_tree_head, error) {
+func getSTH(ctl_host string) (Signed_tree_head, error) {
     
     var sth Signed_tree_head
 
@@ -125,7 +126,7 @@ func Get_sth(ctl_host string) (Signed_tree_head, error) {
     }
 
 // use json to unmarshal the response into the appropriate form
-    err = json.Unmarshal(body,&sth)
+    err = json.Unmarshal(body, &sth)
     if err != nil {
 	return sth, err
     }
@@ -134,10 +135,10 @@ func Get_sth(ctl_host string) (Signed_tree_head, error) {
 
 }
 
-// take an entry and parse it as a MerkleTreeLeaf.  it's base64-encoded, so decode and parse "by hand".  the Merkle_tree_leaf.Entry field will require further processing
-func Parse_leaf_input(entry Raw_entry) (Merkle_tree_leaf, error) {
+// take an entry and parse it as a MerkleTreeLeaf.  it's base64-encoded, so decode and parse "by hand".  the MerkleTreeLeaf.Entry field will require further processing
+func parseLeafInput(entry Raw_entry) (MerkleTreeLeaf, error) {
 
-    var leaf Merkle_tree_leaf
+    var leaf MerkleTreeLeaf
 
     leaf_input := entry.Leaf_input
 
@@ -170,8 +171,8 @@ func Parse_leaf_input(entry Raw_entry) (Merkle_tree_leaf, error) {
 
 }
 
-// the Merkle_tree_leaf.Entry field is a base64 string; the first 4 characters (decoding to 3 bytes) give the length, and the rest is the certificate itself.  there seems to be some auxiliary padding at the end which has to be stripped out.  this returns a certificate, which consists of the length, plus the DER-encoded certificate itself
-func Parse_cert_entry(leaf Merkle_tree_leaf) (certificate, error) {
+// the MerkleTreeLeaf.Entry field is a base64 string; the first 4 characters (decoding to 3 bytes) give the length, and the rest is the certificate itself.  there seems to be some auxiliary padding at the end which has to be stripped out.  this returns a certificate, which consists of the length, plus the DER-encoded certificate itself
+func parseCertEntry(leaf MerkleTreeLeaf) (certificate, error) {
 
     var cert_bytes []byte
 
@@ -209,7 +210,7 @@ func Parse_cert_entry(leaf Merkle_tree_leaf) (certificate, error) {
         return cert, err
     }
 
-    cert.Length = three_byte_to_uint32(cert_bytes[0:3])
+    cert.Length = threeByteToUint32(cert_bytes[0:3])
 
     if uint32(len(cert_bytes)) < cert.Length+3 {
         err := errors.New("Invalid certificate: too short")
@@ -223,9 +224,9 @@ func Parse_cert_entry(leaf Merkle_tree_leaf) (certificate, error) {
 }
 
 // parse the DER-encoded byte sequence, and extract the commonname field.  returns the error of either parsing the leaf.Entry/leaf.Extra_data field, or of parsing the DER-encoded bytes
-func Get_commonname(leaf_input Merkle_tree_leaf) (string, error) {
+func getCommonname(leaf_input MerkleTreeLeaf) (string, error) {
 
-    cert, err := Parse_cert_entry(leaf_input)
+    cert, err := parseCertEntry(leaf_input)
     if err != nil {
         log.Println(err)
         return "", err
