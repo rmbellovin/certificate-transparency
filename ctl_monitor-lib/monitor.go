@@ -188,7 +188,7 @@ func (m *Monitor) addEntries(start uint64, end uint64) {
     }
     defer statement.Close()
 
-    var entries []Raw_entry
+    var entries []rawEntry
     var leaf MerkleTreeLeaf
     var timestamp uint64
     var common_name string

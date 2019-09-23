@@ -22,13 +22,13 @@ type Signed_tree_head struct {
     Tree_head_signature string
 }
 
-type Raw_entry struct {
+type rawEntry struct {
     Leaf_input string
     Extra_data string
 }
 
-type get_entry_response struct {
-    Entries []Raw_entry
+type getEntriesResponse struct {
+    Entries []rawEntry
 }
 
 type MerkleTreeLeaf struct {
@@ -54,7 +54,7 @@ func threeByteToUint32(bytes []byte) uint32 {
 }
 
 // get entries from ctl_host between start and end (inclusive).  throws a fatal error if called with an invalid CT log url, or for an invalid range, or if there is a network problem
-func getEntries(ctl_host string, start uint64, end uint64) []Raw_entry {
+func getEntries(ctl_host string, start uint64, end uint64) []rawEntry {
 
     if start < 0 || end < 0 {
         log.Fatalln("Invalid range: start and end must be at least 0")
@@ -69,7 +69,7 @@ func getEntries(ctl_host string, start uint64, end uint64) []Raw_entry {
     }
 
 // initialize an empty list of entries retrieved
-    var all_entries_received []Raw_entry
+    var all_entries_received []rawEntry
 
 // the RFC allows CT logs to only return a few entries at a time, so we keep making requests
     for start <= end {
@@ -92,7 +92,7 @@ func getEntries(ctl_host string, start uint64, end uint64) []Raw_entry {
         }
 
 // for some reason, go won't unmarshal data into an array of structs, but will unmarshal data into an auxiliary struct whose data is an array of structs
-        var entry_array get_entry_response
+        var entry_array getEntriesResponse
         err = json.Unmarshal(body, &entry_array)
         if err != nil {
             log.Fatalln("getEntries", start, end, err)
@@ -136,7 +136,7 @@ func getSTH(ctl_host string) (Signed_tree_head, error) {
 }
 
 // take an entry and parse it as a MerkleTreeLeaf.  it's base64-encoded, so decode and parse "by hand".  the MerkleTreeLeaf.Entry field will require further processing
-func parseLeafInput(entry Raw_entry) (MerkleTreeLeaf, error) {
+func parseLeafInput(entry rawEntry) (MerkleTreeLeaf, error) {
 
     var leaf MerkleTreeLeaf
 
