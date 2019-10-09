@@ -1,6 +1,6 @@
 README
 
-The go code for this CTL monitor consists of ctl_monitor.go and three library files (monitor.go, controller.go, and ctl_parsing.go).  I am running go-1.10.4 on Ubuntu 18.04.  My $GOPATH is $HOME/go, and I put ctl_monitor.go in $HOME/go/src/cloudflare, monitor.go in $HOME/go/src/cloudflare/monitor, controller.go in $HOME/go/src/cloudflare/controller, and ctl_parsing.go in $HOME/go/src/cloudflare/ctl_parsing.  In addition to the standard libraries, it also requires the libraries gorilla/mux, mattn/go-sqlite3, prometheus/client_golang/prometheus, and prometheus/client_golang/prometheus/promhttp, which should be automagically downloaded from github.
+The go code for this CTL monitor consists of ctl_monitor.go and three library files (monitor.go, controller.go, and ctl_parsing.go).  In addition to the standard libraries, it also requires the libraries gorilla/mux, mattn/go-sqlite3, prometheus/client_golang/prometheus, and prometheus/client_golang/prometheus/promhttp, which should be automagically downloaded from github.
 
 It takes a specified CTL url on the commandline, and checks every five minutes whether there are new certificates.  It then checks whether any new certificate corresponds to a hostname on the list (by parsing the X509 certificate or PreCert entry and checking the commonname field), and if so, adds it to a sqlite3 database.  Rows added to the database must be unique. 
 
